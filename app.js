@@ -1,5 +1,6 @@
 const { Telegraf, Markup } = require('telegraf');
 const crypto = require('crypto');
+const qs = require('querystring')
 const { table } = require('table');
 require('isomorphic-fetch');
 require('dotenv').config();
@@ -27,9 +28,9 @@ const createKucoinHeader = (timestamp, method = "GET", endpoint, params) => {
     };
     let strForSign = '';
     if (method === 'GET' || method === 'DELETE') {
-        strForSign = timestamp + method + endpoint + formatQuery(params);
+        strForSign = timestamp + method + endpoint + formatQuery(params || "");
     } else {
-        strForSign = timestamp + method + endpoint + JSON.stringify(params);
+        strForSign = timestamp + method + endpoint + JSON.stringify(params || {});
     }
     const signatureResult = crypto.createHmac('sha256', apiSecret)
         .update(strForSign)
@@ -99,6 +100,55 @@ bot.hears('/payout', async (ctx) => {
     }
 });
 
+bot.hears('/balance', (ctx) => {
+    if (checkCredentials(ctx)) {
+        ctx.reply(process.env.SECURITY_QUESTION);
+        bot.on('text', async (textCtx) => {
+            const { message: { text } } = textCtx;
+            if (text === process.env.SECURITY_ANSWER) {
+                const now = Date.now() + '';
+                const baseUrl = "https://api.kucoin.com";
+                const query = "/api/v1/accounts";
+                const bodyMain = {
+                    currency: "KDA",
+                    type: "main"
+                }
+                const bodyTrading = {
+                    currency: "KDA",
+                    type: "trade"
+                }
+                const endpointMain = `${baseUrl}${query}${formatQuery(bodyMain)}`;
+                const endpointTrading = `${baseUrl}${query}${formatQuery(bodyTrading)}`;
+                const { headers: headersMain } = createKucoinHeader(now, "GET", query, bodyMain);
+                const { headers: headersTrading } = createKucoinHeader(now, "GET", query, bodyTrading);
+                const [resMain, resTrading] = await Promise.all([
+                    fetch(endpointMain, {
+                        method: "GET",
+                        headers: headersMain,
+                    }), fetch(endpointTrading, {
+                        method: "GET",
+                        headers: headersTrading,
+                    })]);
+
+                const { data: jsonMain } = await resMain.json();
+                const { data: jsonTrading } = await resTrading.json();
+                const [dataMain] = jsonMain;
+                const [dataTrading] = jsonTrading;
+                console.error(dataMain, dataTrading);
+                const tableData = [
+                    ['Wal Type', 'Balance'],
+                    [`${dataMain.type}`, `${dataMain.balance}`],
+                    [`${dataTrading.type}`, `${dataTrading.balance}`],
+                ];
+
+                textCtx.replyWithHTML(`<b>Wallet balances: </b><pre>${table(tableData)}</pre>`);
+            } else {
+                textCtx.reply("🚨 👏 Chiamata in errore");
+            }
+        });
+    }
+});
+
 bot.hears('/sellall', (ctx) => {
     if (checkCredentials(ctx)) {
         ctx.reply(process.env.SECURITY_QUESTION);
@@ -109,24 +159,27 @@ bot.hears('/sellall', (ctx) => {
                     side: "sell",
                     symbol: "KDA-USDT",
                     type: "market",
-                    clientOid: crypto.randomBytes(20).toString('hex'),
-                    size: "100%",
+                    clientOid: "textexampleclientoid",
+                    size: "1",
                 };
                 const now = Date.now() + '';
                 const baseUrl = "https://api.kucoin.com";
                 const query = "/api/v1/orders";
                 const endpoint = `${baseUrl}${query}`;
                 const { headers } = createKucoinHeader(now, "POST", query, body);
-                console.log(headers, JSON.stringify(body));
-                const { res } = await fetch(endpoint, {
+                const res = await fetch(endpoint, {
                     method: "POST",
                     body: JSON.stringify(body),
                     headers,
                 });
-                const output = res.status === 200 ? "🤙" : "🚨 👏";
+                const { msg } = await res.json();
+                let output = "🤙";
+                if (res.status !== 200) output = "🚨 👏 Chiamata in errore";
+                if (msg === "Balance insufficient!") output = "🚨 👏 Balance insufficiente";
+                if (res.status !== 200) output = "🚨 👏 Chiamata in errore";
                 textCtx.reply(output);
             } else {
-                textCtx.reply("🚨 👏");
+                textCtx.reply("🚨 👏 Chiamata in errore");
             }
         });
     }
