@@ -155,14 +155,50 @@ bot.hears('/sellall', (ctx) => {
         bot.on('text', async (textCtx) => {
             const { message: { text } } = textCtx;
             if (text === process.env.SECURITY_ANSWER) {
+
+                const now = Date.now() + '';
+                const baseUrlAccount = "https://api.kucoin.com";
+                const queryAccount = "/api/v1/accounts";
+                const bodyMain = {
+                    currency: "KDA",
+                    type: "trade"
+                }
+                const endpointMain = `${baseUrlAccount}${queryAccount}${formatQuery(bodyMain)}`;
+                const { headers: headersMain } = createKucoinHeader(now, "GET", queryAccount, bodyMain);
+                const resMain = await fetch(endpointMain, {
+                    method: "GET",
+                    headers: headersMain,
+                })
+                const { data: jsonMain } = await resMain.json();
+                const [dataMain] = jsonMain;
+                const { available } = dataMain;
+
+                const baseUrlInnerTransfer = "https://api.kucoin.com";
+                const queryInnerTransfer = "/api/v2/accounts/inner-transfer";
+                const bodyInnerTransfer = {
+                    clientOid: "testexampleforinnertransfer",
+                    currency: "KDA",
+                    from: "main",
+                    to: "trade",
+                    amount: available,
+                }
+                const endpointInnerTransfer = `${baseUrlInnerTransfer}${queryInnerTransfer}`;
+                const { headers: headersInnerTransfer } = createKucoinHeader(now, "POST", queryInnerTransfer, bodyInnerTransfer);
+                await fetch(endpointInnerTransfer, {
+                    method: "POST",
+                    headers: headersInnerTransfer,
+                    body: JSON.stringify(bodyInnerTransfer),
+                })
+
+                textCtx.reply("Valuta spostata da wallet main a trading wallet");
+
                 const body = {
                     side: "sell",
                     symbol: "KDA-USDT",
                     type: "market",
                     clientOid: "textexampleclientoid",
-                    size: "1",
+                    size: Math.round((available * 100) / 100).toFixed(3)
                 };
-                const now = Date.now() + '';
                 const baseUrl = "https://api.kucoin.com";
                 const query = "/api/v1/orders";
                 const endpoint = `${baseUrl}${query}`;
@@ -172,14 +208,14 @@ bot.hears('/sellall', (ctx) => {
                     body: JSON.stringify(body),
                     headers,
                 });
-                const { msg } = await res.json();
+                const { msg, code } = await res.json();
                 let output = "🤙";
+                console.error(msg, code, available);
                 if (res.status !== 200) output = "🚨 👏 Chiamata in errore";
-                if (msg === "Balance insufficient!") output = "🚨 👏 Balance insufficiente";
-                if (res.status !== 200) output = "🚨 👏 Chiamata in errore";
+                if (code !== "200000") output = `🚨 👏  ${msg}`;
                 textCtx.reply(output);
             } else {
-                textCtx.reply("🚨 👏 Chiamata in errore");
+                textCtx.reply("🚨 👏 Esci di qui porcoddio!");
             }
         });
     }
