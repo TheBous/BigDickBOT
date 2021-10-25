@@ -51,7 +51,7 @@ bot.start((ctx) => ctx.reply('Benvenuto! Per te un enorme fallo! 👺'));
 
 bot.hears('/recap', async (ctx) => {
     if (checkCredentials(ctx)) {
-        const res = await fetch("https://poolflare.com/api/v1/coin/kda/account/d58a9d2a48ce6c5e1611ca476dc4c86b2c9d11a10d20aaf70f53b6a1f7992167/stats");
+        const res = await fetch(`https://poolflare.com/api/v1/coin/kda/account/${process.env.POOLFLARE_ADDRESS}/stats`);
         const { data: { payout, reward24h, balance } } = await res.json();
         const data = [
             ['Payout', 'Reward24', 'Balance'],
@@ -64,7 +64,7 @@ bot.hears('/recap', async (ctx) => {
 
 bot.hears('/payout', async (ctx) => {
     if (checkCredentials(ctx)) {
-        const res = await fetch("https://poolflare.com/api/v1/coin/kda/account/d58a9d2a48ce6c5e1611ca476dc4c86b2c9d11a10d20aaf70f53b6a1f7992167/payouts");
+        const res = await fetch(`https://poolflare.com/api/v1/coin/kda/account/${process.env.POOLFLARE_ADDRESS}/payouts`);
         const { data: { payouts } } = await res.json();
         const [lastPayout, preLastPayout] = payouts;
         const { address, amount: lastAmount, status, txID, timestamp: lastTimestamp, info } = preLastPayout;
@@ -134,7 +134,6 @@ bot.hears('/balance', (ctx) => {
                 const { data: jsonTrading } = await resTrading.json();
                 const [dataMain] = jsonMain;
                 const [dataTrading] = jsonTrading;
-                console.error(dataMain, dataTrading);
                 const tableData = [
                     ['Wal Type', 'Balance'],
                     [`${dataMain.type}`, `${dataMain.balance}`],
@@ -155,65 +154,69 @@ bot.hears('/sellall', (ctx) => {
         bot.on('text', async (textCtx) => {
             const { message: { text } } = textCtx;
             if (text === process.env.SECURITY_ANSWER) {
+                try {
+                    const now = Date.now() + '';
+                    const baseUrlAccount = "https://api.kucoin.com";
+                    const queryAccount = "/api/v1/accounts";
+                    const bodyMain = {
+                        currency: "KDA",
+                        type: "trade"
+                    }
+                    const endpointMain = `${baseUrlAccount}${queryAccount}${formatQuery(bodyMain)}`;
+                    const { headers: headersMain } = createKucoinHeader(now, "GET", queryAccount, bodyMain);
+                    const resMain = await fetch(endpointMain, {
+                        method: "GET",
+                        headers: headersMain,
+                    })
+                    const { data: jsonMain } = await resMain.json();
+                    const [dataMain] = jsonMain;
+                    const { available } = dataMain;
 
-                const now = Date.now() + '';
-                const baseUrlAccount = "https://api.kucoin.com";
-                const queryAccount = "/api/v1/accounts";
-                const bodyMain = {
-                    currency: "KDA",
-                    type: "trade"
+                    const baseUrlInnerTransfer = "https://api.kucoin.com";
+                    const queryInnerTransfer = "/api/v2/accounts/inner-transfer";
+                    const bodyInnerTransfer = {
+                        clientOid: "testexampleforinnertransfer",
+                        currency: "KDA",
+                        from: "main",
+                        to: "trade",
+                        amount: available,
+                    }
+                    const endpointInnerTransfer = `${baseUrlInnerTransfer}${queryInnerTransfer}`;
+                    const { headers: headersInnerTransfer } = createKucoinHeader(now, "POST", queryInnerTransfer, bodyInnerTransfer);
+                    const innerTransferRes = await fetch(endpointInnerTransfer, {
+                        method: "POST",
+                        headers: headersInnerTransfer,
+                        body: JSON.stringify(bodyInnerTransfer),
+                    });
+                    const { msg: innerTransferMsg, code: innerTransferCode } = await res.json();
+                    if (innerTransferRes.status !== 200) throw new Error({ message: "Errore nella chiamata inner transfer" });
+                    if (innerTransferCode !== "200000") throw new Error({ message: innerTransferMsg });
+                    textCtx.reply("Valuta spostata da wallet main a trading wallet");
+
+                    const body = {
+                        side: "sell",
+                        symbol: "KDA-USDT",
+                        type: "market",
+                        clientOid: "textexampleclientoid",
+                        size: Math.round((available * 100) / 100).toFixed(3)
+                    };
+                    const baseUrl = "https://api.kucoin.com";
+                    const query = "/api/v1/orders";
+                    const endpoint = `${baseUrl}${query}`;
+                    const { headers } = createKucoinHeader(now, "POST", query, body);
+                    const res = await fetch(endpoint, {
+                        method: "POST",
+                        body: JSON.stringify(body),
+                        headers,
+                    });
+                    const { msg, code } = await res.json();
+                    if (res.status !== 200) throw new Error({ message: "Errore nella chiamata di trading" });
+                    if (code !== "200000") throw new Error({ message: msg });
+
+                    textCtx.reply("🤙");
+                } catch ({ message }) {
+                    textCtx.reply(`🚨 👏  ${e}`);
                 }
-                const endpointMain = `${baseUrlAccount}${queryAccount}${formatQuery(bodyMain)}`;
-                const { headers: headersMain } = createKucoinHeader(now, "GET", queryAccount, bodyMain);
-                const resMain = await fetch(endpointMain, {
-                    method: "GET",
-                    headers: headersMain,
-                })
-                const { data: jsonMain } = await resMain.json();
-                const [dataMain] = jsonMain;
-                const { available } = dataMain;
-
-                const baseUrlInnerTransfer = "https://api.kucoin.com";
-                const queryInnerTransfer = "/api/v2/accounts/inner-transfer";
-                const bodyInnerTransfer = {
-                    clientOid: "testexampleforinnertransfer",
-                    currency: "KDA",
-                    from: "main",
-                    to: "trade",
-                    amount: available,
-                }
-                const endpointInnerTransfer = `${baseUrlInnerTransfer}${queryInnerTransfer}`;
-                const { headers: headersInnerTransfer } = createKucoinHeader(now, "POST", queryInnerTransfer, bodyInnerTransfer);
-                await fetch(endpointInnerTransfer, {
-                    method: "POST",
-                    headers: headersInnerTransfer,
-                    body: JSON.stringify(bodyInnerTransfer),
-                })
-
-                textCtx.reply("Valuta spostata da wallet main a trading wallet");
-
-                const body = {
-                    side: "sell",
-                    symbol: "KDA-USDT",
-                    type: "market",
-                    clientOid: "textexampleclientoid",
-                    size: Math.round((available * 100) / 100).toFixed(3)
-                };
-                const baseUrl = "https://api.kucoin.com";
-                const query = "/api/v1/orders";
-                const endpoint = `${baseUrl}${query}`;
-                const { headers } = createKucoinHeader(now, "POST", query, body);
-                const res = await fetch(endpoint, {
-                    method: "POST",
-                    body: JSON.stringify(body),
-                    headers,
-                });
-                const { msg, code } = await res.json();
-                let output = "🤙";
-                console.error(msg, code, available);
-                if (res.status !== 200) output = "🚨 👏 Chiamata in errore";
-                if (code !== "200000") output = `🚨 👏  ${msg}`;
-                textCtx.reply(output);
             } else {
                 textCtx.reply("🚨 👏 Esci di qui porcoddio!");
             }
