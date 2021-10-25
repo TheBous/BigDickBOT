@@ -110,11 +110,11 @@ bot.hears('/balance', (ctx) => {
                 const baseUrl = "https://api.kucoin.com";
                 const query = "/api/v1/accounts";
                 const bodyMain = {
-                    currency: "KDA",
+                    currency: "USDT",
                     type: "main"
                 }
                 const bodyTrading = {
-                    currency: "KDA",
+                    currency: "USDT",
                     type: "trade"
                 }
                 const endpointMain = `${baseUrl}${query}${formatQuery(bodyMain)}`;
@@ -215,7 +215,7 @@ bot.hears('/sellall', (ctx) => {
 
                     textCtx.reply("🤙");
                 } catch ({ message }) {
-                    textCtx.reply(`🚨 👏  ${e}`);
+                    textCtx.reply(`🚨 👏  ${message}`);
                 }
             } else {
                 textCtx.reply("🚨 👏 Esci di qui porcoddio!");
