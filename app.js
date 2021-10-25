@@ -1,5 +1,6 @@
-const { Telegraf } = require('telegraf')
-const crypto = require('crypto')
+const { Telegraf, Markup } = require('telegraf');
+const crypto = require('crypto');
+const { table } = require('table');
 require('isomorphic-fetch');
 require('dotenv').config();
 
@@ -50,11 +51,51 @@ bot.start((ctx) => ctx.reply('Benvenuto! Per te un enorme fallo! 👺'));
 bot.hears('/recap', async (ctx) => {
     if (checkCredentials(ctx)) {
         const res = await fetch("https://poolflare.com/api/v1/coin/kda/account/d58a9d2a48ce6c5e1611ca476dc4c86b2c9d11a10d20aaf70f53b6a1f7992167/stats");
-        const { data: { payout, reward24h } } = await res.json();
-        ctx.replyWithHTML(`
-        <b>payout</b>: ${payout}<br/>
-        <b>Reward 24h</b>: ${reward24h}
+        const { data: { payout, reward24h, balance } } = await res.json();
+        const data = [
+            ['Payout', 'Reward24', 'Balance'],
+            [`${payout}`, `${reward24h}`, `${balance}`],
+        ];
+
+        ctx.replyWithHTML(`<b>Miner stats: </b><pre>${table(data)}</pre>`);
+    }
+});
+
+bot.hears('/payout', async (ctx) => {
+    if (checkCredentials(ctx)) {
+        const res = await fetch("https://poolflare.com/api/v1/coin/kda/account/d58a9d2a48ce6c5e1611ca476dc4c86b2c9d11a10d20aaf70f53b6a1f7992167/payouts");
+        const { data: { payouts } } = await res.json();
+        const [lastPayout, preLastPayout] = payouts;
+        const { address, amount: lastAmount, status, txID, timestamp: lastTimestamp, info } = preLastPayout;
+        const { amount: lastToFillAmount, timestamp: timestampToFill } = lastPayout;
+
+        bot.action('last-to-fill', async (ctx) => {
+            ctx.replyWithHTML(`
+        <b>Address</b>: ${address}
+        <b>Amount 24h</b>: ${lastToFillAmount}
+        <b>Timestamp</b>: ${new Date(timestampToFill * 1000)}
         `);
+        });
+        bot.action('last-filled', async (ctx) => {
+            ctx.replyWithHTML(`
+        <b>Address</b>: ${address}
+        <b>Amount 24h</b>: ${lastAmount}
+        <b>Status</b>: ${status}
+        <b>TxID</b>: ${txID}
+        <b>Timestamp</b>: ${new Date(lastTimestamp * 1000)}
+        `);
+        });
+
+        return ctx.replyWithPhoto({ url: 'https://media-exp1.licdn.com/dms/image/C4D03AQFyXdvCWVwApg/profile-displayphoto-shrink_800_800/0/1533629374484?e=1640822400&v=beta&t=sW-WbWmvrvN8aXgFUwApgkyGNMs-9aoZ776Ej78itkk' },
+            {
+                caption: `Scegli di visualizzare l'ultimo payout eseguito oppure l'ultimo ancora da eseguire`,
+                parse_mode: 'Markdown',
+                ...Markup.inlineKeyboard([
+                    Markup.button.callback('Payout da fare', 'last-to-fill'),
+                    Markup.button.callback('Payout fatto', 'last-filled'),
+                ])
+            }
+        )
     }
 });
 
@@ -83,7 +124,9 @@ bot.hears('/sellall', (ctx) => {
                     headers,
                 });
                 const output = res.status === 200 ? "🤙" : "🚨 👏";
-                ctx.reply(output);
+                textCtx.reply(output);
+            } else {
+                textCtx.reply("🚨 👏");
             }
         });
     }
