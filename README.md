@@ -28,10 +28,12 @@ yarn
 
 - Create your own .env and fill it with these values: 
 ```bash
-API_SECRET=
-API_PASSPHRASE=
-API_KEY=
-BOT_TOKEN=
+API_SECRET = Kucoin API secret
+API_PASSPHRASE = Kucoin API passphrase
+API_KEY = Kucoin API key
+BOT_TOKEN = Telegram BOT token
+SECURITY_QUESTION = Security question to trasfer cryptos
+SECURITY_ANSWER = Security answer to trasfer cryptos
 ```
 
 ## Start
