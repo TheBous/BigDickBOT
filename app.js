@@ -51,14 +51,29 @@ bot.start((ctx) => ctx.reply('Benvenuto! Per te un enorme fallo! 👺'));
 
 bot.hears('/recap', async (ctx) => {
     if (checkCredentials(ctx)) {
+        const now = Date.now() + '';
+        const baseUrl = "https://api.kucoin.com";
+        const query = "/api/v1/market/orderbook/level1";
+        const body = {
+            symbol: "KDA-USDT"
+        };
+        const endpoint = `${baseUrl}${query}${formatQuery(body)}`;
+        const { headers } = createKucoinHeader(now, "GET", query, body);
+        const coinResponse = await fetch(endpoint, {
+            method: "GET",
+            headers,
+        });
+        const { data: { price } } = await coinResponse.json();
+        console.log(coinResponse);
         const res = await fetch(`https://poolflare.com/api/v1/coin/kda/account/${process.env.POOLFLARE_ADDRESS}/stats`);
         const { data: { payout, reward24h, balance } } = await res.json();
         const data = [
-            ['Payout', 'Reward24', 'Balance'],
+            ['TOT', 'TOT24H', '2am-2pm'],
             [`${payout}`, `${reward24h}`, `${balance}`],
         ];
 
         ctx.replyWithHTML(`<b>Miner stats: </b><pre>${table(data)}</pre>`);
+        ctx.reply(`KDA price: ${price} USD`);
     }
 });
 
