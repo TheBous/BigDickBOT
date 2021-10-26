@@ -135,7 +135,7 @@ bot.hears('/balance', (ctx) => {
                 const [dataMain] = jsonMain;
                 const [dataTrading] = jsonTrading;
                 const tableData = [
-                    ['Wal Type', 'Balance'],
+                    ['Wal Type', 'Balance[USDT]'],
                     [`${dataMain.type}`, `${dataMain.balance}`],
                     [`${dataTrading.type}`, `${dataTrading.balance}`],
                     ["Tot", `${Number(dataTrading.balance) + Number(dataMain.balance)}`]
