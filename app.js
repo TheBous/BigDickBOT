@@ -252,7 +252,7 @@ bot.hears('/lollo', (ctx) => {
                     const queryAccount = "/api/v1/accounts";
                     const bodyMain = {
                         currency: "KDA",
-                        type: "trade"
+                        type: "main"
                     }
                     const endpointMain = `${baseUrlAccount}${queryAccount}${formatQuery(bodyMain)}`;
                     const { headers: headersMain } = createKucoinHeader(now, "GET", queryAccount, bodyMain);
@@ -263,7 +263,7 @@ bot.hears('/lollo', (ctx) => {
                     const { data: jsonMain } = await resMain.json();
                     const [dataMain] = jsonMain;
                     const { available } = dataMain;
-
+                    console.log("avail", available);
                     const baseUrlInnerTransfer = "https://api.kucoin.com";
                     const queryInnerTransfer = "/api/v2/accounts/inner-transfer";
                     const bodyInnerTransfer = {
@@ -281,10 +281,10 @@ bot.hears('/lollo', (ctx) => {
                         body: JSON.stringify(bodyInnerTransfer),
                     });
                     const { msg: innerTransferMsg, code: innerTransferCode } = await innerTransferRes.json();
-                    if (innerTransferRes.status !== 200) throw new Error({ message: "Errore nella chiamata inner transfer" });
-                    if (innerTransferCode !== "200000") throw new Error({ message: innerTransferMsg });
+                    if (innerTransferRes.status !== 200) throw new Error({ message: "[INNER] Errore nella chiamata inner transfer" });
+                    if (innerTransferCode !== "200000") throw new Error({ message: `[INNER] ${innerTransferMsg}` });
                     textCtx.reply("Valuta spostata da wallet main a trading wallet");
-
+                    console.log("innser", innerTransferMsg, innerTransferCode);
                     const body = {
                         side: "sell",
                         symbol: "KDA-USDT",
@@ -302,11 +302,12 @@ bot.hears('/lollo', (ctx) => {
                         headers,
                     });
                     const { msg, code } = await res.json();
-                    if (res.status !== 200) throw new Error({ message: "Errore nella chiamata di trading" });
-                    if (code !== "200000") throw new Error({ message: msg });
+                    if (res.status !== 200) throw new Error({ message: "[TRADING] Errore nella chiamata di trading" });
+                    if (code !== "200000") throw new Error({ message: `[TRADING] ${msg}` });
 
                     textCtx.reply("🤙");
                 } catch ({ message }) {
+                    console.log(message);
                     textCtx.reply(`🚨 👏  ${message}`);
                 }
             } else {
