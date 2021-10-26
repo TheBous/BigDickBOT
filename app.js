@@ -138,6 +138,7 @@ bot.hears('/balance', (ctx) => {
                     ['Wal Type', 'Balance'],
                     [`${dataMain.type}`, `${dataMain.balance}`],
                     [`${dataTrading.type}`, `${dataTrading.balance}`],
+                    ["Tot", `${dataTrading.balance + dataMain.balance}`]
                 ];
 
                 textCtx.replyWithHTML(`<b>Wallet balances: </b><pre>${table(tableData)}</pre>`);
