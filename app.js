@@ -280,7 +280,7 @@ bot.hears('/lollo', (ctx) => {
                         headers: headersInnerTransfer,
                         body: JSON.stringify(bodyInnerTransfer),
                     });
-                    const { msg: innerTransferMsg, code: innerTransferCode } = await res.json();
+                    const { msg: innerTransferMsg, code: innerTransferCode } = await innerTransferRes.json();
                     if (innerTransferRes.status !== 200) throw new Error({ message: "Errore nella chiamata inner transfer" });
                     if (innerTransferCode !== "200000") throw new Error({ message: innerTransferMsg });
                     textCtx.reply("Valuta spostata da wallet main a trading wallet");
