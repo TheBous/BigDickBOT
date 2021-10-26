@@ -64,7 +64,6 @@ bot.hears('/recap', async (ctx) => {
             headers,
         });
         const { data: { price } } = await coinResponse.json();
-        console.log(coinResponse);
         const res = await fetch(`https://poolflare.com/api/v1/coin/kda/account/${process.env.POOLFLARE_ADDRESS}/stats`);
         const { data: { payout, reward24h, balance } } = await res.json();
         const data = [
@@ -263,7 +262,6 @@ bot.hears('/lollo', (ctx) => {
                     const { data: jsonMain } = await resMain.json();
                     const [dataMain] = jsonMain;
                     const { available } = dataMain;
-                    console.log("avail", available);
                     const baseUrlInnerTransfer = "https://api.kucoin.com";
                     const queryInnerTransfer = "/api/v2/accounts/inner-transfer";
                     const bodyInnerTransfer = {
@@ -284,7 +282,6 @@ bot.hears('/lollo', (ctx) => {
                     if (innerTransferRes.status !== 200) throw new Error({ message: "[INNER] Errore nella chiamata inner transfer" });
                     if (innerTransferCode !== "200000") throw new Error({ message: `[INNER] ${innerTransferMsg}` });
                     textCtx.reply("Valuta spostata da wallet main a trading wallet");
-                    console.log("innser", innerTransferMsg, innerTransferCode);
                     const body = {
                         side: "sell",
                         symbol: "KDA-USDT",
@@ -307,7 +304,6 @@ bot.hears('/lollo', (ctx) => {
 
                     textCtx.reply("🤙");
                 } catch ({ message }) {
-                    console.log(message);
                     textCtx.reply(`🚨 👏  ${message}`);
                 }
             } else {
