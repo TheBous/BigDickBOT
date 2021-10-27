@@ -32,8 +32,9 @@ API_SECRET = Kucoin API secret
 API_PASSPHRASE = Kucoin API passphrase
 API_KEY = Kucoin API key
 BOT_TOKEN = Telegram BOT token
-SECURITY_QUESTION = Security question to trasfer cryptos
-SECURITY_ANSWER = Security answer to trasfer cryptos
+SECURITY_QUESTION = Security question to transfer cryptos
+SECURITY_ANSWER = Security answer to transfer cryptos
+POOLFLARE_ADDRESS = address to retrieve mined coin on poolflare
 ```
 
 ## Start
