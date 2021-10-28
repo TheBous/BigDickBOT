@@ -19,5 +19,5 @@ jobs:
             git pull
             cd github-actions-tutorial # navigate into the repo
             yarn
-            supervisorctl restart all
+            sudo supervisorctl restart all
 
