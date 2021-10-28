@@ -3,9 +3,19 @@ const crypto = require('crypto');
 const qs = require('querystring')
 const { table } = require('table');
 require('isomorphic-fetch');
+const nodeCron = require("node-cron");
+
 require('dotenv').config();
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
+
+nodeCron.schedule("0 8 * * *", async () => {
+    const endpoint = `https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=kda&convert=USD&CMC_PRO_API_KEY=${process.env.CMCAPI}`;
+    const res = await fetch(endpoint);
+    const { data: { KDA: { cmc_rank, quote: { USD: { percent_change_1h, percent_change_24h, percent_change_7d, percent_change_30d } } } } } = await res.json();
+    bot.telegram.sendMessage(64901697, `KDA MORNING STATS: \n Rank: ${cmc_rank} \n 1h %: ${percent_change_1h.toFixed(1)}% \n 24h%: ${percent_change_24h.toFixed(1)}% \n 7d%: ${percent_change_7d.toFixed(1)}% \n 30g%: ${percent_change_30d.toFixed(1)}%`);
+    bot.telegram.sendMessage(76981651, `KDA MORNING STATS: \n Rank: ${cmc_rank} \n 1h %: ${percent_change_1h.toFixed(1)}% \n 24h%: ${percent_change_24h.toFixed(1)}% \n 7d%: ${percent_change_7d.toFixed(1)}% \n 30g%: ${percent_change_30d.toFixed(1)}%`);
+});
 
 const checkCredentials = (ctx = {}) => ["The_Bous", "tosettil"].includes(ctx.chat.username) && [64901697, 76981651].includes(ctx.chat.id);
 const formatQuery = (queryObj) => {
