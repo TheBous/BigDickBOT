@@ -19,4 +19,5 @@ jobs:
             git pull
             cd github-actions-tutorial # navigate into the repo
             yarn
-            supervisorctl restart bigdickbot:bigdickbot_00
+            supervisorctl restart all
+
