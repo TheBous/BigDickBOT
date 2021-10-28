@@ -37,6 +37,7 @@ BOT_TOKEN = Telegram BOT token
 SECURITY_QUESTION = Security question to transfer cryptos
 SECURITY_ANSWER = Security answer to transfer cryptos
 POOLFLARE_ADDRESS = address to retrieve mined coin on poolflare
+CMCAPI= CoinMarketCap API key
 ```
 
 ## Start
