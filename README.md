@@ -19,14 +19,16 @@ BigDickBOT will give some stats to the admins:
 ## Installation
 
 - You need Node >= 12.20
-- run 
+- run
+
 ```bash
 yarn
 ```
 
 ## Using ENV
 
-- Create your own .env and fill it with these values: 
+- Create your own .env and fill it with these values:
+
 ```bash
 API_SECRET = Kucoin API secret
 API_PASSPHRASE = Kucoin API passphrase
@@ -39,7 +41,8 @@ POOLFLARE_ADDRESS = address to retrieve mined coin on poolflare
 
 ## Start
 
-Start it with 
+Start it with
+
 ```bash
 yarn start
 ```

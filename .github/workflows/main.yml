@@ -1,9 +1,9 @@
 name: Deploy application
- 
+
 on:
   push:
-    branches: [ main ]
- 
+    branches: [main]
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -19,4 +19,3 @@ jobs:
             git pull
             yarn
             sudo supervisorctl restart all
-
