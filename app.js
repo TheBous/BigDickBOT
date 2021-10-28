@@ -77,7 +77,7 @@ const checkCredentials = (ctx = {}) =>
 
 bot.start((ctx) => ctx.reply("Benvenuto! Per te un enorme fallo! 👺"));
 
-bot.command("/stats", async (ctx) => {
+bot.command("stats", async (ctx) => {
   if (checkCredentials(ctx)) {
     const {
       cmc_rank,
@@ -98,7 +98,7 @@ bot.command("/stats", async (ctx) => {
   }
 });
 
-bot.command("/recap", async (ctx) => {
+bot.command("recap", async (ctx) => {
   if (checkCredentials(ctx)) {
     const now = Date.now() + "";
     const baseUrl = "https://api.kucoin.com";
@@ -131,7 +131,7 @@ bot.command("/recap", async (ctx) => {
   }
 });
 
-bot.command("/payout", async (ctx) => {
+bot.command("payout", async (ctx) => {
   if (checkCredentials(ctx)) {
     const res = await fetch(
       `https://poolflare.com/api/v1/coin/kda/account/${process.env.POOLFLARE_ADDRESS}/payouts`
@@ -183,7 +183,7 @@ bot.command("/payout", async (ctx) => {
   }
 });
 
-bot.command("/balance", (ctx) => {
+bot.command("balance", (ctx) => {
   if (checkCredentials(ctx)) {
     ctx.reply(process.env.SECURITY_QUESTION);
     bot.on("text", async (textCtx) => {
@@ -248,7 +248,7 @@ bot.command("/balance", (ctx) => {
   }
 });
 
-bot.command("/lollo", (ctx) => {
+bot.command("lollo", (ctx) => {
   if (checkCredentials(ctx)) {
     ctx.reply(process.env.SECURITY_QUESTION);
     bot.on("text", async (textCtx) => {
