@@ -17,7 +17,6 @@ jobs:
           script: |
             cd /bigdickbot/BigDickBOT/
             git pull
-            cd github-actions-tutorial # navigate into the repo
             yarn
             sudo supervisorctl restart all
 
