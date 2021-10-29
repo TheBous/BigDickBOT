@@ -1,4 +1,4 @@
-const { Telegraf, Markup } = require("telegraf");
+const TelegramBot = require("node-telegram-bot-api");
 const { formatQuery } = require("./helpers/utils");
 const {
   createKucoinHeader,
@@ -12,7 +12,7 @@ const nodeCron = require("node-cron");
 
 require("dotenv").config();
 
-const bot = new Telegraf(process.env.BOT_TOKEN);
+const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
 const getStats = async () => {
   const endpoint = `https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=kda&convert=USD&CMC_PRO_API_KEY=${process.env.CMCAPI}`;
@@ -75,10 +75,8 @@ const checkCredentials = (ctx = {}) =>
   ["The_Bous", "tosettil"].includes(ctx.chat.username) &&
   [64901697, 76981651].includes(ctx.chat.id);
 
-bot.start((ctx) => ctx.reply("Benvenuto! Per te un enorme fallo! 👺"));
-
-bot.command("stats", async (ctx) => {
-  if (checkCredentials(ctx)) {
+bot.onText(/\/stats/, async (msg) => {
+  if (checkCredentials(msg)) {
     const {
       cmc_rank,
       percent_change_1h,
@@ -86,7 +84,8 @@ bot.command("stats", async (ctx) => {
       percent_change_7d,
       percent_change_30d,
     } = await getStats();
-    ctx.reply(
+    bot.sendMessage(
+      msg.chat.id,
       `KDA MORNING STATS: \n Rank: ${cmc_rank} \n 1h %: ${percent_change_1h.toFixed(
         1
       )}% \n 24h%: ${percent_change_24h.toFixed(
@@ -98,8 +97,8 @@ bot.command("stats", async (ctx) => {
   }
 });
 
-bot.command("recap", async (ctx) => {
-  if (checkCredentials(ctx)) {
+bot.onText(/\/recap/, async (msg) => {
+  if (checkCredentials(msg)) {
     const now = Date.now() + "";
     const baseUrl = "https://api.kucoin.com";
     const query = "/api/v1/market/orderbook/level1";
@@ -121,141 +120,141 @@ bot.command("recap", async (ctx) => {
     const {
       data: { payout, reward24h, balance },
     } = await res.json();
-    const data = [
-      ["TOT", "TOT24H", "2am-2pm"],
-      [`${payout}`, `${reward24h}`, `${balance}`],
-    ];
 
-    ctx.replyWithHTML(`<b>Miner stats: </b><pre>${table(data)}</pre>`);
-    ctx.reply(`KDA price: ${price} USD`);
-  }
-});
-
-bot.command("payout", async (ctx) => {
-  if (checkCredentials(ctx)) {
-    const res = await fetch(
-      `https://poolflare.com/api/v1/coin/kda/account/${process.env.POOLFLARE_ADDRESS}/payouts`
-    );
-    const {
-      data: { payouts },
-    } = await res.json();
-    const [lastPayout, preLastPayout] = payouts;
-    const {
-      address,
-      amount: lastAmount,
-      status,
-      txID,
-      timestamp: lastTimestamp,
-      info,
-    } = preLastPayout;
-    const { amount: lastToFillAmount, timestamp: timestampToFill } = lastPayout;
-
-    bot.action("last-to-fill", async (ctx) => {
-      ctx.replyWithHTML(`
-        <b>Address</b>: ${address}
-        <b>Amount 24h</b>: ${lastToFillAmount}
-        <b>Timestamp</b>: ${new Date(timestampToFill * 1000)}
-        `);
-    });
-    bot.action("last-filled", async (ctx) => {
-      ctx.replyWithHTML(`
-        <b>Address</b>: ${address}
-        <b>Amount 24h</b>: ${lastAmount}
-        <b>Status</b>: ${status}
-        <b>TxID</b>: ${txID}
-        <b>Timestamp</b>: ${new Date(lastTimestamp * 1000)}
-        `);
+    bot.on("callback_query", (callbackQuery) => {
+      const { data: category } = callbackQuery;
+      let reply = "";
+      switch (category) {
+        case "total":
+          reply = `${payout} KDA`;
+          break;
+        case "total24":
+          reply = `${reward24h} KDA`;
+          break;
+        case "payout":
+          reply = `${balance} KDA`;
+          break;
+        default:
+          reply = "Choose one";
+      }
+      bot.sendMessage(msg.chat.id, reply);
     });
 
-    return ctx.replyWithPhoto(
-      {
-        url: "https://media-exp1.licdn.com/dms/image/C4D03AQFyXdvCWVwApg/profile-displayphoto-shrink_800_800/0/1533629374484?e=1640822400&v=beta&t=sW-WbWmvrvN8aXgFUwApgkyGNMs-9aoZ776Ej78itkk",
+    bot.sendMessage(msg.chat.id, "Choose stat to see!", {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: "TOT",
+              callback_data: "total",
+            },
+            {
+              text: "TOT24H",
+              callback_data: "total24",
+            },
+            {
+              text: "2am-2pm",
+              callback_data: "payout",
+            },
+          ],
+        ],
       },
-      {
-        caption: `Scegli di visualizzare l'ultimo payout eseguito oppure l'ultimo ancora da eseguire`,
-        parse_mode: "Markdown",
-        ...Markup.inlineKeyboard([
-          Markup.button.callback("Payout da fare", "last-to-fill"),
-          Markup.button.callback("Payout fatto", "last-filled"),
-        ]),
-      }
-    );
-  }
-});
-
-bot.command("balance", (ctx) => {
-  if (checkCredentials(ctx)) {
-    ctx.reply(process.env.SECURITY_QUESTION);
-    bot.on("text", async (textCtx) => {
-      const {
-        message: { text },
-      } = textCtx;
-      if (text === process.env.SECURITY_ANSWER) {
-        const now = Date.now() + "";
-        const baseUrl = "https://api.kucoin.com";
-        const query = "/api/v1/accounts";
-        const bodyMain = {
-          currency: "USDT",
-          type: "main",
-        };
-        const bodyTrading = {
-          currency: "USDT",
-          type: "trade",
-        };
-        const endpointMain = `${baseUrl}${query}${formatQuery(bodyMain)}`;
-        const endpointTrading = `${baseUrl}${query}${formatQuery(bodyTrading)}`;
-        const { headers: headersMain } = createKucoinHeader(
-          now,
-          "GET",
-          query,
-          bodyMain
-        );
-        const { headers: headersTrading } = createKucoinHeader(
-          now,
-          "GET",
-          query,
-          bodyTrading
-        );
-        const [resMain, resTrading] = await Promise.all([
-          fetch(endpointMain, {
-            method: "GET",
-            headers: headersMain,
-          }),
-          fetch(endpointTrading, {
-            method: "GET",
-            headers: headersTrading,
-          }),
-        ]);
-
-        const { data: jsonMain } = await resMain.json();
-        const { data: jsonTrading } = await resTrading.json();
-        const [dataMain] = jsonMain;
-        const [dataTrading] = jsonTrading;
-        const tableData = [
-          ["Wal Type", "Balance[USDT]"],
-          [`${dataMain.type}`, `${dataMain.balance}`],
-          [`${dataTrading.type}`, `${dataTrading.balance}`],
-          ["Tot", `${Number(dataTrading.balance) + Number(dataMain.balance)}`],
-        ];
-
-        textCtx.replyWithHTML(
-          `<b>Wallet balances: </b><pre>${table(tableData)}</pre>`
-        );
-      } else {
-        textCtx.reply("🚨 👏 Chiamata in errore");
-      }
     });
   }
 });
 
-bot.command("lollo", (ctx) => {
-  if (checkCredentials(ctx)) {
-    ctx.reply(process.env.SECURITY_QUESTION);
-    bot.on("text", async (textCtx) => {
-      const {
-        message: { text },
-      } = textCtx;
-      if (text === process.env.SECURITY_ANSWER) {
+bot.onText(/\/balance/, async (msg) => {
+  if (checkCredentials(msg)) {
+    const now = Date.now() + "";
+    const baseUrl = "https://api.kucoin.com";
+    const query = "/api/v1/accounts";
+    const bodyMain = {
+      currency: "USDT",
+      type: "main",
+    };
+    const bodyTrading = {
+      currency: "USDT",
+      type: "trade",
+    };
+    const endpointMain = `${baseUrl}${query}${formatQuery(bodyMain)}`;
+    const endpointTrading = `${baseUrl}${query}${formatQuery(bodyTrading)}`;
+    const { headers: headersMain } = createKucoinHeader(
+      now,
+      "GET",
+      query,
+      bodyMain
+    );
+    const { headers: headersTrading } = createKucoinHeader(
+      now,
+      "GET",
+      query,
+      bodyTrading
+    );
+    const [resMain, resTrading] = await Promise.all([
+      fetch(endpointMain, {
+        method: "GET",
+        headers: headersMain,
+      }),
+      fetch(endpointTrading, {
+        method: "GET",
+        headers: headersTrading,
+      }),
+    ]);
+
+    const { data: jsonMain } = await resMain.json();
+    const { data: jsonTrading } = await resTrading.json();
+    const [dataMain] = jsonMain;
+    const [dataTrading] = jsonTrading;
+
+    bot.on("callback_query", (callbackQuery) => {
+      const { data: category } = callbackQuery;
+      let reply = "";
+      switch (category) {
+        case "main":
+          reply = `${dataMain.balance} USDT`;
+          break;
+        case "trading":
+          reply = `${dataTrading.balance} USDT`;
+          break;
+        case "tot":
+          reply = `${
+            Number(dataTrading.balance) + Number(dataMain.balance)
+          } USDT`;
+          break;
+        default:
+          reply = "Choose one";
+      }
+      bot.sendMessage(msg.chat.id, reply);
+    });
+
+    bot.sendMessage(msg.chat.id, "Choose stat to see!", {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: "Main",
+              callback_data: "main",
+            },
+            {
+              text: "Trading",
+              callback_data: "trading",
+            },
+            {
+              text: "TOT",
+              callback_data: "tot",
+            },
+          ],
+        ],
+      },
+    });
+  }
+});
+
+bot.onText(/\/lollo/, (msg) => {
+  if (checkCredentials(msg)) {
+    bot.on("callback_query", async (callbackQuery) => {
+      const { data: category } = callbackQuery;
+      if (category === "si") {
         try {
           const now = Date.now() + "";
           const baseUrlAccount = "https://api.kucoin.com";
@@ -264,18 +263,28 @@ bot.command("lollo", (ctx) => {
           await innerTransferToTradingWallet(now, baseUrlAccount, available);
           await sellKDA(now, baseUrlAccount, available);
 
-          textCtx.reply("Transfer completed🤙");
+          bot.sendMessage(msg.chat.id, "Transfer completed🤙");
         } catch ({ message }) {
-          textCtx.reply(`🚨 👏  ${message}`);
+          bot.sendMessage(msg.chat.id, `🚨 👏  ${message}`);
         }
-      } else {
-        textCtx.reply("🚨 👏 Esci di qui porcoddio!");
       }
+    });
+
+    bot.sendMessage(msg.chat.id, "Sei sicuro stronzo!?", {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: "Si",
+              callback_data: "si",
+            },
+            {
+              text: "Fottiti",
+              callback_data: "fottiti",
+            },
+          ],
+        ],
+      },
     });
   }
 });
-
-bot.launch();
-
-process.once("SIGINT", () => bot.stop("SIGINT"));
-process.once("SIGTERM", () => bot.stop("SIGTERM"));
