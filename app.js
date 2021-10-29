@@ -114,7 +114,7 @@ bot.onText(/\/stats/, async (msg) => {
 });
 
 bot.onText(/\/recap/, async (msg) => {
-  bot.sendMessage(msg.chat.id, "results")
+  bot.sendMessage(msg.chat.id, results)
   if (checkCredentials(msg)) {
     const now = Date.now() + "";
     const baseUrl = "https://api.kucoin.com";
