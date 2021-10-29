@@ -11,7 +11,23 @@ require("isomorphic-fetch");
 const nodeCron = require("node-cron");
 
 require("dotenv").config();
+const { networkInterfaces } = require('os');
+const nets = networkInterfaces();
 
+const results = Object.create(null); // Or just '{}', an empty object
+
+for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+        // Skip over non-IPv4 and internal (i.e. 127.0.0.1) addresses
+        if (net.family === 'IPv4' && !net.internal) {
+            if (!results[name]) {
+                results[name] = [];
+            }
+            results[name].push(net.address);
+        }
+    }
+}
+console.log(results);
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
 const getStats = async () => {
@@ -49,7 +65,7 @@ nodeCron.schedule("0 8 * * *", async () => {
     percent_change_7d,
     percent_change_30d,
   } = await getStats();
-  bot.telegram.sendMessage(
+  bot.sendMessage(
     64901697,
     `KDA MORNING STATS: \n Rank: ${cmc_rank} \n 1h %: ${percent_change_1h.toFixed(
       1
@@ -59,7 +75,7 @@ nodeCron.schedule("0 8 * * *", async () => {
       1
     )}% \n 30g%: ${percent_change_30d.toFixed(1)}%`
   );
-  bot.telegram.sendMessage(
+  bot.sendMessage(
     76981651,
     `KDA MORNING STATS: \n Rank: ${cmc_rank} \n 1h %: ${percent_change_1h.toFixed(
       1
