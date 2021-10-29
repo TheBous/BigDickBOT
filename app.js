@@ -134,6 +134,9 @@ bot.onText(/\/recap/, async (msg) => {
         case "payout":
           reply = `${balance} KDA`;
           break;
+        case "price":
+          reply = `${price} USD`;
+          break;
         default:
           reply = "Choose one";
       }
@@ -155,6 +158,10 @@ bot.onText(/\/recap/, async (msg) => {
             {
               text: "2am-2pm",
               callback_data: "payout",
+            },
+            {
+              text: "KDA price",
+              callback_data: "price",
             },
           ],
         ],
