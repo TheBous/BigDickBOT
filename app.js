@@ -27,7 +27,7 @@ for (const name of Object.keys(nets)) {
         }
     }
 }
-console.log(results);
+
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
 
 const getStats = async () => {
@@ -114,6 +114,7 @@ bot.onText(/\/stats/, async (msg) => {
 });
 
 bot.onText(/\/recap/, async (msg) => {
+  bot.sendMessage(msg.chat.id, "results")
   if (checkCredentials(msg)) {
     const now = Date.now() + "";
     const baseUrl = "https://api.kucoin.com";
