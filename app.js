@@ -1,4 +1,4 @@
-const TelegramBot = require("node-telegram-bot-api");
+const TeleBot = require("telebot");
 const { formatQuery } = require("./helpers/utils");
 const {
   createKucoinHeader,
@@ -6,29 +6,13 @@ const {
   innerTransferToTradingWallet,
   sellKDA,
 } = require("./helpers/kucoin");
-const { table } = require("table");
 require("isomorphic-fetch");
 const nodeCron = require("node-cron");
 
 require("dotenv").config();
-const { networkInterfaces } = require('os');
-const nets = networkInterfaces();
 
-const results = Object.create(null); // Or just '{}', an empty object
-
-for (const name of Object.keys(nets)) {
-    for (const net of nets[name]) {
-        // Skip over non-IPv4 and internal (i.e. 127.0.0.1) addresses
-        if (net.family === 'IPv4' && !net.internal) {
-            if (!results[name]) {
-                results[name] = [];
-            }
-            results[name].push(net.address);
-        }
-    }
-}
-
-const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
+const bot = new TeleBot(process.env.BOT_TOKEN);
+bot.start();
 
 const getStats = async () => {
   const endpoint = `https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=kda&convert=USD&CMC_PRO_API_KEY=${process.env.CMCAPI}`;
@@ -91,7 +75,7 @@ const checkCredentials = (ctx = {}) =>
   ["The_Bous", "tosettil"].includes(ctx.chat.username) &&
   [64901697, 76981651].includes(ctx.chat.id);
 
-bot.onText(/\/stats/, async (msg) => {
+bot.on("/stats", async (msg) => {
   if (checkCredentials(msg)) {
     const {
       cmc_rank,
@@ -101,7 +85,7 @@ bot.onText(/\/stats/, async (msg) => {
       percent_change_30d,
     } = await getStats();
     bot.sendMessage(
-      msg.chat.id,
+      msg.from.id,
       `KDA MORNING STATS: \n Rank: ${cmc_rank} \n 1h %: ${percent_change_1h.toFixed(
         1
       )}% \n 24h%: ${percent_change_24h.toFixed(
@@ -113,8 +97,7 @@ bot.onText(/\/stats/, async (msg) => {
   }
 });
 
-bot.onText(/\/recap/, async (msg) => {
-  bot.sendMessage(msg.chat.id, results)
+bot.on("/recap", async (msg) => {
   if (checkCredentials(msg)) {
     const now = Date.now() + "";
     const baseUrl = "https://api.kucoin.com";
@@ -138,56 +121,47 @@ bot.onText(/\/recap/, async (msg) => {
       data: { payout, reward24h, balance },
     } = await res.json();
 
-    bot.on("callback_query", (callbackQuery) => {
-      const { data: category } = callbackQuery;
-      let reply = "";
-      switch (category) {
-        case "total":
-          reply = `${payout} KDA`;
-          break;
-        case "total24":
-          reply = `${reward24h} KDA`;
-          break;
-        case "payout":
-          reply = `${balance} KDA`;
-          break;
-        case "price":
-          reply = `${price} USD`;
-          break;
-        default:
-          reply = "Choose one";
+    bot.on("callbackQuery", (msg) => {
+      const { data: category } = msg;
+      if (["total", "total24", "payout", "price"].includes(category)) {
+        let reply = "";
+        switch (category) {
+          case "total":
+            reply = `${payout} KDA`;
+            break;
+          case "total24":
+            reply = `${reward24h} KDA`;
+            break;
+          case "payout":
+            reply = `${balance} KDA`;
+            break;
+          case "price":
+            reply = `${price} USD`;
+            break;
+          default:
+            reply = "Choose one";
+        }
+        return bot.answerCallbackQuery(msg.id, { text: reply, alert: true });
       }
-      bot.sendMessage(msg.chat.id, reply);
     });
 
-    bot.sendMessage(msg.chat.id, "Choose stat to see!", {
-      reply_markup: {
-        inline_keyboard: [
-          [
-            {
-              text: "TOT",
-              callback_data: "total",
-            },
-            {
-              text: "TOT24H",
-              callback_data: "total24",
-            },
-            {
-              text: "2am-2pm",
-              callback_data: "payout",
-            },
-            {
-              text: "KDA price",
-              callback_data: "price",
-            },
-          ],
+    const replyMarkup = bot.inlineKeyboard(
+      [
+        [
+          bot.inlineButton("TOT", { callback: "total" }),
+          bot.inlineButton("TOT24H", { callback: "total24" }),
+          bot.inlineButton("2am-2pm", { callback: "payout" }),
+          bot.inlineButton("KDA price", { callback: "price" }),
         ],
-      },
-    });
+      ],
+      { resize: true }
+    );
+
+    bot.sendMessage(msg.from.id, "Choose stat to see!", { replyMarkup });
   }
 });
 
-bot.onText(/\/balance/, async (msg) => {
+bot.on("/balance", async (msg) => {
   if (checkCredentials(msg)) {
     const now = Date.now() + "";
     const baseUrl = "https://api.kucoin.com";
@@ -230,85 +204,84 @@ bot.onText(/\/balance/, async (msg) => {
     const [dataMain] = jsonMain;
     const [dataTrading] = jsonTrading;
 
-    bot.on("callback_query", (callbackQuery) => {
-      const { data: category } = callbackQuery;
-      let reply = "";
-      switch (category) {
-        case "main":
-          reply = `${dataMain.balance} USDT`;
-          break;
-        case "trading":
-          reply = `${dataTrading.balance} USDT`;
-          break;
-        case "tot":
-          reply = `${
-            Number(dataTrading.balance) + Number(dataMain.balance)
-          } USDT`;
-          break;
-        default:
-          reply = "Choose one";
+    bot.on("callbackQuery", (msg) => {
+      const { data: category } = msg;
+      if (["main", "trading", "tot"].includes(category)) {
+        let reply = "";
+        switch (category) {
+          case "main":
+            reply = `${dataMain.balance} USDT`;
+            break;
+          case "trading":
+            reply = `${dataTrading.balance} USDT`;
+            break;
+          case "tot":
+            reply = `${
+              Number(dataTrading.balance) + Number(dataMain.balance)
+            } USDT`;
+            break;
+          default:
+            reply = "Choose one";
+        }
+        return bot.answerCallbackQuery(msg.id, { text: reply, alert: true });
       }
-      bot.sendMessage(msg.chat.id, reply);
     });
 
-    bot.sendMessage(msg.chat.id, "Choose stat to see!", {
-      reply_markup: {
-        inline_keyboard: [
-          [
-            {
-              text: "Main",
-              callback_data: "main",
-            },
-            {
-              text: "Trading",
-              callback_data: "trading",
-            },
-            {
-              text: "TOT",
-              callback_data: "tot",
-            },
-          ],
+    const replyMarkup = bot.inlineKeyboard(
+      [
+        [
+          bot.inlineButton("Main", { callback: "main" }),
+          bot.inlineButton("Trading", { callback: "trading" }),
+          bot.inlineButton("TOT", { callback: "tot" }),
         ],
-      },
-    });
+      ],
+      { resize: true }
+    );
+
+    bot.sendMessage(msg.from.id, "Choose wallet to see!", { replyMarkup });
   }
 });
 
-bot.onText(/\/lollo/, (msg) => {
+bot.on("/lollo", (msg) => {
   if (checkCredentials(msg)) {
     bot.on("callback_query", async (callbackQuery) => {
       const { data: category } = callbackQuery;
-      if (category === "si") {
-        try {
-          const now = Date.now() + "";
-          const baseUrlAccount = "https://api.kucoin.com";
+    });
 
-          const available = await getAvailability(now, baseUrlAccount);
-          await innerTransferToTradingWallet(now, baseUrlAccount, available);
-          await sellKDA(now, baseUrlAccount, available);
+    bot.on("callbackQuery", async (msg) => {
+      const { data: category } = msg;
+      if (["si", "no"].includes(category)) {
+        if (category === "si") {
+          try {
+            const now = Date.now() + "";
+            const baseUrlAccount = "https://api.kucoin.com";
 
-          bot.sendMessage(msg.chat.id, "Transfer completed🤙");
-        } catch ({ message }) {
-          bot.sendMessage(msg.chat.id, `🚨 👏  ${message}`);
+            const available = await getAvailability(now, baseUrlAccount);
+            await innerTransferToTradingWallet(now, baseUrlAccount, available);
+            await sellKDA(now, baseUrlAccount, available);
+            return bot.answerCallbackQuery(msg.id, {
+              text: "Transfer completed🤙",
+              alert: true,
+            });
+          } catch ({ message }) {
+            return bot.answerCallbackQuery(msg.id, {
+              text: `🚨 👏  ${message}`,
+              alert: true,
+            });
+          }
         }
       }
     });
 
-    bot.sendMessage(msg.chat.id, "Sei sicuro stronzo!?", {
-      reply_markup: {
-        inline_keyboard: [
-          [
-            {
-              text: "Si",
-              callback_data: "si",
-            },
-            {
-              text: "Fottiti",
-              callback_data: "fottiti",
-            },
-          ],
+    const replyMarkup = bot.inlineKeyboard(
+      [
+        [
+          bot.inlineButton("Si", { callback: "si" }),
+          bot.inlineButton("Fottiti", { callback: "no" }),
         ],
-      },
-    });
+      ],
+      { resize: true }
+    );
+    bot.sendMessage(msg.from.id, "Are you sure?", { replyMarkup });
   }
 });
