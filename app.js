@@ -141,7 +141,7 @@ bot.on("/recap", async (msg) => {
           default:
             reply = "Choose one";
         }
-        return bot.answerCallbackQuery(msg.id, { text: reply, alert: true });
+        return bot.answerCallbackQuery(msg.id, { text: reply, alert: true, cacheTime: 20, });
       }
     });
 
@@ -216,14 +216,13 @@ bot.on("/balance", async (msg) => {
             reply = `${dataTrading.balance} USDT`;
             break;
           case "tot":
-            reply = `${
-              Number(dataTrading.balance) + Number(dataMain.balance)
-            } USDT`;
+            reply = `${Number(dataTrading.balance) + Number(dataMain.balance)
+              } USDT`;
             break;
           default:
             reply = "Choose one";
         }
-        return bot.answerCallbackQuery(msg.id, { text: reply, alert: true });
+        return bot.answerCallbackQuery(msg.id, { text: reply, alert: true, cacheTime: 20, });
       }
     });
 
@@ -262,11 +261,13 @@ bot.on("/lollo", (msg) => {
             return bot.answerCallbackQuery(msg.id, {
               text: "Transfer completed🤙",
               alert: true,
+              cacheTime: 20,
             });
           } catch ({ message }) {
             return bot.answerCallbackQuery(msg.id, {
               text: `🚨 👏  ${message}`,
               alert: true,
+              cacheTime: 20,
             });
           }
         }
